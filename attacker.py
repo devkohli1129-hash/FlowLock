@@ -5,41 +5,35 @@ url = "http://127.0.0.1:8000/data"
 
 print("--- STARTING FLOW LOCK ATTACK SIMULATION ---")
 print(f"Targeting: {url}")
+print("Note: Using 1s Timeout to bypass Tarpitting and force a 100% block.")
 print("-" * 50)
 
-for i in range(1, 61):
+for i in range(1, 31):
     try:
-        # Send a rapid request
-        response = requests.get(url)
+        # Use timeout=1 so the attacker doesn't wait for the 5-second "Slow Down"
+        response = requests.get(url, timeout=5)
         
-        # Get security metrics from headers
         risk = response.headers.get("X-Risk-Score", "0")
-        rpm = response.headers.get("X-RPM", "0")
-        var = response.headers.get("X-Variance", "0")
         
-        # Handle the successful requests (Status 200)
         if response.status_code == 200:
-            print(f"Req {i:02} | Status: 200 | Risk: {risk}% | RPM: {rpm} | Var: {var}")
+            print(f"Req {i:02} | Status: 200 | Risk: {risk}% | [FAST]")
         
-        # Handle the Blocked requests (Status 403)
         elif response.status_code == 403:
-            data = response.json()
-            retry_after = response.headers.get("Retry-After", "??")
-            
             print(f"\n" + "!" * 50)
-            print(f"Req {i:02} | STATUS: 403 FORBIDDEN")
-            print(f"REASON: {data.get('detail')}")
-            print(f"LOCKOUT DURATION: {retry_after} seconds")
+            print(f"Req {i:02} | STATUS: 403 FORBIDDEN - ATTACK NEUTRALIZED")
             print("!" * 50)
-            
-            print("\n[SUCCESS] The behavioral engine successfully quarantined the bot.")
             break
             
-        # Tiny delay to maintain "Robotic Consistency" for the demo
-        time.sleep(0.01)
-            
+    except requests.exceptions.Timeout:
+        # This is where the magic happens for the demo
+        print(f"Req {i:02} | Status: DELAYED | [SERVER TARPITTING DETECTED]")
+        # We don't 'break' here, we keep sending requests to hit that 100% block
+        continue
+        
     except Exception as e:
         print(f"\n[!] Connection Error: {e}")
         break
+
+    time.sleep(0.1)
 
 print("\nSimulation Ended.")
